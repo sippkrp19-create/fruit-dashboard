@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard สวนผลไม้</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Fruit Accounting Dashboard</p>
+          <h1>สวนผลไม้: ภาพรวมรายรับ รายจ่าย และเงินค้าง</h1>
+          <p id="insightText" class="insight">กำลังดึงข้อมูลจาก Google Sheets...</p>
+        </div>
+        <div class="top-actions">
+          <button id="refreshBtn" type="button" class="icon-button" title="รีเฟรชข้อมูล">↻</button>
+          <button id="clearBtn" type="button" class="ghost-button">ล้างตัวกรอง</button>
+          <p id="lastUpdated" class="updated">ยังไม่อัปเดต</p>
+        </div>
+      </header>
+
+      <section class="filters" aria-label="ตัวกรองข้อมูล">
+        <label>
+          ปี
+          <select id="yearFilter"></select>
+        </label>
+        <label>
+          เดือน
+          <select id="monthFilter"></select>
+        </label>
+        <label>
+          สินค้า
+          <select id="productFilter"></select>
+        </label>
+        <label>
+          สายพันธุ์/เกรด
+          <select id="gradeFilter"></select>
+        </label>
+        <label>
+          วิธีรับ/จ่ายเงิน
+          <select id="paymentFilter"></select>
+        </label>
+        <label>
+          สถานะ
+          <select id="statusFilter"></select>
+        </label>
+      </section>
+
+      <section id="filterChips" class="chips" aria-label="ตัวกรองที่ใช้อยู่"></section>
+
+      <main class="dashboard-grid">
+        <section class="kpi-grid" aria-label="ตัวเลขสรุป">
+          <article class="kpi-card">
+            <span>รายรับรวม</span>
+            <strong id="kpiRevenue">0</strong>
+            <small id="trendRevenue">-</small>
+          </article>
+          <article class="kpi-card danger">
+            <span>รายจ่ายรวม</span>
+            <strong id="kpiExpense">0</strong>
+            <small id="trendExpense">-</small>
+          </article>
+          <article class="kpi-card gold">
+            <span>สุทธิ</span>
+            <strong id="kpiNet">0</strong>
+            <small id="trendNet">-</small>
+          </article>
+          <article class="kpi-card">
+            <span>ปริมาณกก.</span>
+            <strong id="kpiQty">0</strong>
+            <small>จากรายการที่เลือก</small>
+          </article>
+          <article class="kpi-card">
+            <span>ราคาเฉลี่ย/กก.</span>
+            <strong id="kpiAvg">0</strong>
+            <small>รายรับ ÷ ปริมาณ</small>
+          </article>
+          <article class="kpi-card warn">
+            <span>เงินค้างรวม</span>
+            <strong id="kpiPending">0</strong>
+            <small id="pendingSplit">ค้างรับ 0 | ค้างจ่าย 0</small>
+          </article>
+        </section>
+
+        <section class="panel donut-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">สัดส่วนตามสินค้า</p>
+              <h2>กราฟวงกลมเลือกมุมมองได้</h2>
+            </div>
+            <div class="segmented" role="group" aria-label="เลือกค่ากราฟวงกลม">
+              <button data-metric="revenue" class="active" type="button">รายรับ</button>
+              <button data-metric="expense" type="button">รายจ่าย</button>
+              <button data-metric="net" type="button">สุทธิ</button>
+            </div>
+          </div>
+          <div class="chart-row">
+            <div id="donutChart" class="donut-chart" role="img" aria-label="สัดส่วนตามสินค้า"></div>
+            <div id="donutLegend" class="legend"></div>
+          </div>
+        </section>
+
+        <section class="panel monthly-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">รายเดือน</p>
+              <h2>รายรับ รายจ่าย และสุทธิ</h2>
+            </div>
+          </div>
+          <div id="monthlyChart" class="bar-chart" role="img" aria-label="กราฟรายเดือน"></div>
+        </section>
+
+        <section class="panel payments-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">เงินสด/โอน/ค้าง</p>
+              <h2>สถานะเงินที่ต้องตาม</h2>
+            </div>
+          </div>
+          <div id="paymentCards" class="payment-cards"></div>
+        </section>
+
+        <section class="panel rank-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">จัดอันดับ</p>
+              <h2>ตัวทำเงินและต้นทุนสำคัญ</h2>
+            </div>
+          </div>
+          <div class="rank-columns">
+            <div>
+              <h3>สินค้ารายรับสูงสุด</h3>
+              <div id="productRank" class="rank-list"></div>
+            </div>
+            <div>
+              <h3>รายจ่ายสูงสุด</h3>
+              <div id="expenseRank" class="rank-list"></div>
+            </div>
+            <div>
+              <h3>เกรดทำเงินสูงสุด</h3>
+              <div id="gradeRank" class="rank-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel follow-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">ต้องติดตาม</p>
+              <h2>ค้างรับ ค้างจ่าย และรายการผิดปกติ</h2>
+            </div>
+          </div>
+          <div id="followList" class="follow-list"></div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">รายการล่าสุด</p>
+              <h2>ฐานข้อมูลที่ถูกกรอง</h2>
+            </div>
+            <input id="searchBox" type="search" placeholder="ค้นหารายการ..." />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>วันที่</th>
+                  <th>สินค้า</th>
+                  <th>ประเภท</th>
+                  <th>เกรด</th>
+                  <th>ชื่อ/รายการ</th>
+                  <th>รายรับ</th>
+                  <th>รายจ่าย</th>
+                  <th>สุทธิ</th>
+                  <th>วิธี</th>
+                </tr>
+              </thead>
+              <tbody id="rowsTable"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      <section id="errorBox" class="error-box" hidden></section>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
