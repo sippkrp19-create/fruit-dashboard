@@ -346,6 +346,15 @@ h1 {
   font-size: 13px;
 }
 
+.legend-item small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
 .chipless {
   width: 100%;
   min-height: 30px;
