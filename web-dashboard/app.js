@@ -315,6 +315,47 @@ function groupBy(rows, key, valueKey) {
 function renderDonut(rows) {
   const metric = state.donutMetric;
   const products = mergePreferred(PRODUCT_TYPES, unique(rows.map((row) => row.product))).slice(0, 3);
+  const data = products.map((name) => ({
+    name,
+    value: rows.filter((row) => row.product === name).reduce((sum, row) => sum + row[metric], 0),
+  }));
+  const total = data.reduce((sum, d) => sum + Math.abs(d.value), 0);
+  if (!total) {
+    $("donutChart").innerHTML = `<div class="empty-state">ไม่มีข้อมูลสำหรับกราฟนี้</div>`;
+    $("donutLegend").innerHTML = "";
+    return;
+  }
+  const positiveData = data.filter((d) => Math.abs(d.value) > 0);
+  let angle = -90;
+  const cx = 120;
+  const cy = 120;
+  const r = 86;
+  const width = 240;
+  const paths = positiveData.length === 1
+    ? `<circle class="donut-slice" data-product="${escapeHtml(positiveData[0].name)}" cx="${cx}" cy="${cy}" r="70" fill="none" stroke="${COLORS[data.findIndex((d) => d.name === positiveData[0].name) % COLORS.length]}" stroke-width="68"><title>${escapeHtml(positiveData[0].name)} ${money(positiveData[0].value)}</title></circle>`
+    : positiveData.map((d) => {
+      const i = data.findIndex((item) => item.name === d.name);
+      const slice = (Math.abs(d.value) / total) * 360;
+      const path = describeArc(cx, cy, r, angle, angle + slice);
+      angle += slice;
+      return `<path class="donut-slice" data-product="${escapeHtml(d.name)}" d="${path}" fill="${COLORS[i % COLORS.length]}" stroke="#fbfff8" stroke-width="4"><title>${escapeHtml(d.name)} ${money(d.value)}</title></path>`;
+    })
+    .join("");
+  $("donutChart").innerHTML = `
+    <svg viewBox="0 0 ${width} ${width}">
+      ${paths}
+      <circle cx="${cx}" cy="${cy}" r="52" fill="#fbfff8"></circle>
+      <text x="${cx}" y="${cy - 4}" text-anchor="middle" font-size="13" fill="#607267">รวม</text>
+      <text x="${cx}" y="${cy + 20}" text-anchor="middle" font-size="20" font-weight="700" fill="#1f5b41">${money(total)}</text>
+    </svg>`;
+  $("donutLegend").innerHTML = data
+    .map((d, i) => `<button class="legend-item chipless" type="button" data-product="${escapeHtml(d.name)}"><span class="swatch" style="background:${COLORS[i % COLORS.length]}"></span><span>${escapeHtml(d.name)}</span><strong>${money(d.value)}</strong></button>`)
+    .join("");
+}
+
+function renderFruitGradeDonuts(rows) {
+  const metric = state.donutMetric;
+  const products = mergePreferred(PRODUCT_TYPES, unique(rows.map((row) => row.product))).slice(0, 3);
   $("fruitDonutGrid").innerHTML = products.map((product, productIndex) => {
     const productRows = rows.filter((row) => row.product === product);
     const gradeData = groupBy(productRows, "grade", metric);
@@ -543,6 +584,7 @@ function render() {
   const rows = filteredRows();
   renderKpis(rows);
   renderDonut(rows);
+  renderFruitGradeDonuts(rows);
   renderMonthly(rows);
   renderPaymentCards(rows);
   renderRanks(rows);

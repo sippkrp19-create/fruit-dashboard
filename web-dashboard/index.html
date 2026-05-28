@@ -97,7 +97,9 @@
               <button data-metric="net" type="button">สุทธิ</button>
             </div>
           </div>
-          <div class="fruit-donut-grid" id="fruitDonutGrid" role="img" aria-label="สัดส่วนสายพันธุ์/เกรดแยกตามสินค้า">
+          <div class="chart-row">
+            <div id="donutChart" class="donut-chart" role="img" aria-label="สัดส่วนตามสินค้า"></div>
+            <div id="donutLegend" class="legend"></div>
           </div>
         </section>
 
@@ -109,6 +111,16 @@
             </div>
           </div>
           <div id="monthlyChart" class="bar-chart" role="img" aria-label="กราฟรายเดือน"></div>
+        </section>
+
+        <section class="panel grade-donut-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label">สายพันธุ์/เกรด</p>
+              <h2>แผนภูมิวงกลมแยกตามชนิดผลไม้</h2>
+            </div>
+          </div>
+          <div class="fruit-donut-grid" id="fruitDonutGrid" role="img" aria-label="สัดส่วนสายพันธุ์หรือเกรดแยกตามสินค้า"></div>
         </section>
 
         <section class="panel payments-panel">
