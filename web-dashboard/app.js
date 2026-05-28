@@ -3,6 +3,7 @@ const SHEET_NAME = "ฐานข้อมูล";
 const LIST_SHEET_NAME = "รายการดรอปดาวน์";
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(SHEET_NAME)}&tqx=out:json;responseHandler:__dashboardData`;
 const LIST_GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(LIST_SHEET_NAME)}&tqx=out:json;responseHandler:__dashboardListData`;
+const CONFIG = window.DASHBOARD_CONFIG || {};
 
 const MONTHS = [
   "ม.ค.",
@@ -19,8 +20,8 @@ const MONTHS = [
   "ธ.ค.",
 ];
 
-const PRODUCT_TYPES = ["ทุเรียน", "ลองกอง", "มังคุด"];
-const GRADE_TYPES = ["เกรด1", "เกรด2", "เกรด3", "เกรด4", "เกรดพุ่ม", "เกรดปุก", "เกรดดำ", "เกรดร่วง"];
+const PRODUCT_TYPES = CONFIG.products || ["ทุเรียน", "ลองกอง", "มังคุด"];
+const GRADE_TYPES = CONFIG.grades || ["เกรด1", "เกรด2", "เกรด3", "เกรด4", "เกรดพุ่ม", "เกรดปุก", "เกรดดำ", "เกรดร่วง"];
 const COLORS = ["#d9a441", "#3f8a5a", "#4c7fb8", "#e08a3e", "#8e6bbf", "#c9604b", "#6aa6a1", "#9bbf4a"];
 
 const state = {
@@ -84,6 +85,40 @@ function cellValue(cell) {
   return "";
 }
 
+function normalizeText(value, fallback = "ไม่ระบุ") {
+  const text = String(value || "").trim();
+  return text || fallback;
+}
+
+function aliasFrom(map, value) {
+  if (!map) return value;
+  return map[value] || map[String(value).toLowerCase()] || value;
+}
+
+function normalizeProduct(value) {
+  return aliasFrom(CONFIG.productAliases, normalizeText(value));
+}
+
+function detectGradeFromRules(product, text) {
+  const haystack = String(text || "").toLowerCase();
+  if (!haystack) return "";
+  return (CONFIG.gradeRules || []).find((rule) => {
+    if (rule.product && rule.product !== product) return false;
+    return (rule.contains || []).some((word) => haystack.includes(String(word).toLowerCase()));
+  })?.grade || "";
+}
+
+function normalizeGrade(value, product, nameText) {
+  const text = normalizeText(value);
+  const productMap = CONFIG.gradeAliasesByProduct?.[product] || {};
+  const aliasedByProduct = aliasFrom(productMap, text);
+  if (aliasedByProduct !== text) return aliasedByProduct;
+  const aliased = aliasFrom(CONFIG.gradeAliases, text);
+  if (aliased !== text) return aliased;
+  if (text === "ไม่ระบุ") return detectGradeFromRules(product, nameText) || text;
+  return text;
+}
+
 function normalizePayment(value) {
   const text = String(value || "").trim();
   if (text === "โอน") return "เงินโอน";
@@ -105,15 +140,17 @@ function normalizeRows(table) {
       const revenue = toNumber(cellValue(c[index["รายรับ"]]));
       const expense = toNumber(cellValue(c[index["รายจ่าย"]])) + toNumber(cellValue(c[index["ค่าตัด"]])) + toNumber(cellValue(c[index["เบิก"]]));
       const netCell = toNumber(cellValue(c[index["สุทธิ"]]));
+      const product = normalizeProduct(cellValue(c[index["สินค้า"]]));
+      const name = String(cellValue(c[index["ชื่อ/รายการ"]]) || "").trim();
       return {
         date,
         dateText: date ? `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}` : "",
         year: String(season || ""),
         month: date ? date.getMonth() + 1 : "",
-        product: String(cellValue(c[index["สินค้า"]]) || "ไม่ระบุ").trim(),
+        product,
         type: String(cellValue(c[index["ประเภทรายการ"]]) || "").trim(),
-        grade: String(cellValue(c[index["สายพันธุ์/เกรด"]]) || "").trim(),
-        name: String(cellValue(c[index["ชื่อ/รายการ"]]) || "").trim(),
+        grade: normalizeGrade(cellValue(c[index["สายพันธุ์/เกรด"]]), product, name),
+        name,
         price: toNumber(cellValue(c[index["ราคาต่อกก."]])),
         qty: toNumber(cellValue(c[index["ปริมาณกก."]])),
         revenue,
